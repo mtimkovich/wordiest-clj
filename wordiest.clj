@@ -1,5 +1,4 @@
-(def letters '("f" "o" "o2w" "o" "p" "w" "c4l" "n2w" "a" "x2l" "r3l"
-               "a" "b" "i"))
+#!/usr/bin/env clj
 
 (defn letter-value [c]
   (let [letters {\d 2 \n 2 \u 2 \l 2
@@ -45,22 +44,44 @@
                                tiles))]
     (* letters word-mul)))
 
-(defn dictionary [file]
+(defn diff [s1 s2]
+  "https://stackoverflow.com/questions/23199295/how-to-diff-substract-two-lists-in-clojure/23200627#23200627"
+  (mapcat
+    (fn [[x n]] (repeat n x))
+    (apply merge-with - (map frequencies [s1 s2]))))
+
+(defn get-all-words [dictionary tiles]
+  (sort-by #(:score %) >
+           (for [word dictionary
+                 :let [match (tiles-can-spell tiles word)]
+                 :when (seq match)]
+             {:word word :tiles match :score (score match)})))
+
+(defn solution [a b]
+  (+ (:score a) (:score b)))
+
+(defn print-solution [a b]
+  (printf "%s: %s (%s) + %s (%s)\n" (solution a b)
+          (:word a) (:score a)
+          (:word b) (:score b)))
+
+(defn get-dictionary [file]
   (with-open [fp (clojure.java.io/reader file)]
     (reduce conj [] (map #(.toLowerCase %) (line-seq fp)))))
 
+(def dictionary (get-dictionary "TWL06.txt"))
+
+(def letters *command-line-args*)
 (def tiles (sort-by
              (juxt :word-mul :letter-mul) #(compare %2 %1)
              (map to-tile letters)))
 
-(def matches (for [word (dictionary "TWL06.txt")
-                   :let [match (tiles-can-spell tiles word)]
-                   :when (seq match)]
-               {:word word :tiles match :score (score match)}))
+(when (or (not= (count tiles) 14) (some nil? tiles))
+  (println "Invalid tiles"))
 
-(def sorted-matches (sort-by #(:score %) > matches))
-; (println (:word (first sorted-matches)))
-(doseq [match (take 10 sorted-matches)]
-  (println (:word match)))
+(def matches (get-all-words dictionary tiles))
+(def first-word (first matches))
+(def second-word (first (get-all-words dictionary
+                                       (diff tiles (:tiles first-word)))))
 
-; TODO: Calculate remaining tiles to create the second word.
+(print-solution first-word second-word)
