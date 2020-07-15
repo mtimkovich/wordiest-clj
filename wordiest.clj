@@ -80,8 +80,15 @@
   (println "Invalid tiles"))
 
 (def matches (get-all-words dictionary tiles))
-(def first-word (first matches))
-(def second-word (first (get-all-words dictionary
-                                       (diff tiles (:tiles first-word)))))
 
-(print-solution first-word second-word)
+(doseq [match (take 1 matches)
+      :let [remaining (diff tiles (:tiles match))
+            second-word (first (get-all-words dictionary remaining))]
+      :when second-word]
+  (print-solution match second-word))
+
+; (def first-word (first matches))
+; (def second-word (first (get-all-words dictionary
+;                                        (diff tiles (:tiles first-word)))))
+
+; (print-solution first-word second-word)
