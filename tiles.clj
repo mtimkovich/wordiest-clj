@@ -1,4 +1,5 @@
-(def letters '("f" "o" "o2w" "o" "p" "w" "c4l" "n2w" "a" "x2l" "r3l" "a" "b" "i"))
+(def letters '("f" "o" "o2w" "o" "p" "w" "c4l" "n2w" "a" "x2l" "r3l"
+               "a" "b" "i"))
 
 (defn letter-value [c]
   (let [letters {\d 2 \n 2 \u 2 \l 2
@@ -11,6 +12,7 @@
     (get letters c 1)))
 
 (defn to-tile [s]
+  "Converts user input into tiles."
   (let [letter (get s 0)
         tile {:letter letter
               :letter-val (letter-value letter)}]
@@ -24,11 +26,18 @@
       nil)))
 
 (defn tiles-contains [tiles word]
-  "Check if tiles CAN spell the word.
-  TODO: We actually want to return which tiles were used to spell the word."
-  (let [tile-freq (frequencies (map :letter tiles))]
-    (every? #(>= (get tile-freq (key %)) (val %))
-            (frequencies word))))
+  "Checks if our tiles can spell word."
+  (loop [letters (frequencies word)
+         used []]
+    (if (seq letters)
+      (let [e (first letters)
+            letter-tiles (take (val e)
+                               (filter #(= (key e) (get % :letter)) tiles))]
+        (if (not= (count letter-tiles) (val e))
+          nil
+          (recur (rest letters) (concat used letter-tiles))))
+      used)))
+
 
 (defn score [tiles]
   (let [word-mul (reduce * (map #(get % :word-mul 1) tiles))
@@ -38,8 +47,9 @@
     (* letters word-mul)))
 
 
-; TODO: Sort tiles by value.
-(def tiles (map to-tile letters))
-(println tiles)
-(print (score tiles))
-; (println (tiles-contains tiles "crab"))
+(def tiles (sort-by
+             (juxt :word-mul :letter-mul) #(compare %2 %1)
+             (map to-tile letters)))
+; (println tiles)
+(def match (tiles-contains tiles "woof"))
+(println match (score match))
