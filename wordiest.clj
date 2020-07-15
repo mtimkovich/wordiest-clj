@@ -25,8 +25,7 @@
             nil))
       nil)))
 
-(defn tiles-contains [tiles word]
-  "Checks if our tiles can spell word."
+(defn tiles-can-spell [tiles word]
   (loop [letters (frequencies word)
          used []]
     (if (seq letters)
@@ -46,10 +45,22 @@
                                tiles))]
     (* letters word-mul)))
 
+(defn dictionary [file]
+  (with-open [fp (clojure.java.io/reader file)]
+    (reduce conj [] (map #(.toLowerCase %) (line-seq fp)))))
 
 (def tiles (sort-by
              (juxt :word-mul :letter-mul) #(compare %2 %1)
              (map to-tile letters)))
-; (println tiles)
-(def match (tiles-contains tiles "woof"))
-(println match (score match))
+
+(def matches (for [word (dictionary "TWL06.txt")
+                   :let [match (tiles-can-spell tiles word)]
+                   :when (seq match)]
+               {:word word :tiles match :score (score match)}))
+
+(def sorted-matches (sort-by #(:score %) > matches))
+; (println (:word (first sorted-matches)))
+(doseq [match (take 10 sorted-matches)]
+  (println (:word match)))
+
+; TODO: Calculate remaining tiles to create the second word.
