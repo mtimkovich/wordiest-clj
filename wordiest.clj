@@ -1,8 +1,10 @@
 #!/usr/bin/env clj
+(require '[clojure.string :as str])
 
 (defn letter-value [c]
+  "Wordiest letter values."
   (let [letters {\d 2 \n 2 \u 2 \l 2
-                 \g 3 \c 3\p 3 \h 3
+                 \g 3 \c 3 \p 3 \h 3
                  \m 4 \b 4 \f 4 \w 4 \y 4
                  \k 5
                  \v 6
@@ -12,7 +14,8 @@
 
 (defn to-tile [s]
   "Converts user input into tiles."
-  (let [letter (get s 0)
+  (let [s (.toLowerCase s)
+        letter (get s 0)
         tile {:letter letter
               :letter-val (letter-value letter)}]
     (case (count s)
@@ -25,6 +28,7 @@
       nil)))
 
 (defn tiles-can-spell [tiles word]
+  "Return the tiles to spell the given word, otherwise nil."
   (loop [letters (frequencies word)
          used []]
     (if (seq letters)
@@ -36,8 +40,8 @@
           (recur (rest letters) (concat used letter-tiles))))
       used)))
 
-
 (defn score [tiles]
+  "Calculates the score for given tiles."
   (let [word-mul (reduce * (map #(get % :word-mul 1) tiles))
         letters (reduce + (map #(* (:letter-val %)
                                    (get % :letter-mul 1))
@@ -45,50 +49,65 @@
     (* letters word-mul)))
 
 (defn diff [s1 s2]
-  "https://stackoverflow.com/questions/23199295/how-to-diff-substract-two-lists-in-clojure/23200627#23200627"
   (mapcat
     (fn [[x n]] (repeat n x))
     (apply merge-with - (map frequencies [s1 s2]))))
 
 (defn get-all-words [dictionary tiles]
-  (sort-by #(:score %) >
-           (for [word dictionary
-                 :let [match (tiles-can-spell tiles word)]
-                 :when (seq match)]
-             {:word word :tiles match :score (score match)})))
+  (sort-by
+    :score >
+    (for [word dictionary
+          :let [match (tiles-can-spell tiles word)]
+          :when (seq match)]
+      {:word word :tiles match :score (score match)})))
 
-(defn solution [a b]
-  (+ (:score a) (:score b)))
+(defn solution [pair]
+  (reduce + (map :score pair)))
 
-(defn print-solution [a b]
-  (printf "%s: %s (%s) + %s (%s)\n" (solution a b)
-          (:word a) (:score a)
-          (:word b) (:score b)))
+(defn print-solution [pair]
+  (let [[a b] pair]
+    (printf "%s: %s (%s) + %s (%s)\n" (solution pair)
+            (:word a) (:score a)
+            (:word b) (:score b))))
 
 (defn get-dictionary [file]
+  "Reads word list into a vector."
   (with-open [fp (clojure.java.io/reader file)]
-    (reduce conj [] (map #(.toLowerCase %) (line-seq fp)))))
+    (reduce conj []
+            (map #(.toLowerCase %)
+                 (filter #(not (str/starts-with? "#" %))
+                         (line-seq fp))))))
 
-(def dictionary (get-dictionary "TWL06.txt"))
+(defn parse-letters [letters]
+  "Converts letters to tiles, sorts by tile strength, and validates input."
+  (let [tiles (sort-by
+                (juxt :word-mul :letter-mul) #(compare %2 %1)
+                (map to-tile letters))]
+    (if (or (not= (count tiles) 14)
+            (some nil? tiles))
+      nil
+      tiles)))
 
-(def letters *command-line-args*)
-(def tiles (sort-by
-             (juxt :word-mul :letter-mul) #(compare %2 %1)
-             (map to-tile letters)))
+(defn solve [tiles]
+  (let [dictionary (get-dictionary "TWL06.txt")
+        matches (get-all-words dictionary tiles)]
+    (first
+      (sort-by
+        solution >
+        (for [match (take 50 matches)
+              :let [remaining (diff tiles (:tiles match))
+                    second-word (first (get-all-words
+                                         (map :word matches)
+                                         remaining))]
+              :when second-word]
+          [match second-word])))))
 
-(when (or (not= (count tiles) 14) (some nil? tiles))
-  (println "Invalid tiles"))
+(def tiles (parse-letters *command-line-args*))
+; TODO: Turn these testcases into tests.
+; (def tiles (parse-letters (str/split "c a i o o g w5w e u r2l r i2l u2w l" #"\s+")))
+; (def tiles (parse-letters (str/split "e4w v e t5l n q i d2l f u i w s3w t" #"\s+")))
+; (def tiles (parse-letters (str/split "n e2l z t s a s n l t3l e e e f" #"\s+")))
 
-(def matches (get-all-words dictionary tiles))
-
-(doseq [match (take 1 matches)
-      :let [remaining (diff tiles (:tiles match))
-            second-word (first (get-all-words dictionary remaining))]
-      :when second-word]
-  (print-solution match second-word))
-
-; (def first-word (first matches))
-; (def second-word (first (get-all-words dictionary
-;                                        (diff tiles (:tiles first-word)))))
-
-; (print-solution first-word second-word)
+(if (nil? tiles)
+  (println "Invalid tiles")
+  (print-solution (solve tiles)))
