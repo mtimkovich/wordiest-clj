@@ -64,11 +64,12 @@
 (defn solution [pair]
   (reduce + (map :score pair)))
 
+(defn match-str [m]
+  (format "%s (%s)" (:word m) (:score m)))
+
 (defn print-solution [pair]
   (let [[a b] pair]
-    (printf "%s: %s (%s) + %s (%s)\n" (solution pair)
-            (:word a) (:score a)
-            (:word b) (:score b))))
+    (printf "%s: %s + %s\n" (solution pair) (match-str a) (match-str b))))
 
 (defn get-dictionary [file]
   "Reads word list into a vector."
@@ -78,11 +79,12 @@
                  (filter #(not (str/starts-with? "#" %))
                          (line-seq fp))))))
 
+(defn sort-tiles [tiles]
+  (sort-by (juxt :word-mul :letter-mul) #(compare %2 %1) tiles))
+
 (defn parse-letters [letters]
   "Converts letters to tiles, sorts by tile strength, and validates input."
-  (let [tiles (sort-by
-                (juxt :word-mul :letter-mul) #(compare %2 %1)
-                (map to-tile letters))]
+  (let [tiles (sort-tiles (map to-tile letters))]
     (if (or (not= (count tiles) 14)
             (some nil? tiles))
       nil
@@ -95,7 +97,7 @@
       (sort-by
         solution >
         (for [match (take 50 matches)
-              :let [remaining (diff tiles (:tiles match))
+              :let [remaining (sort-tiles (diff tiles (:tiles match)))
                     second-word (first (get-all-words
                                          (map :word matches)
                                          remaining))]
