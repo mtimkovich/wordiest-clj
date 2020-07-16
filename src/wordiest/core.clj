@@ -33,14 +33,16 @@
   "Return the tiles to spell the given word, otherwise nil."
   (loop [letters (frequencies word)
          used []]
-    (if (seq letters)
-      (let [e (first letters)
-            letter-tiles (take (val e)
-                               (filter #(= (key e) (get % :letter)) tiles))]
-        (if (not= (count letter-tiles) (val e))
-          nil
-          (recur (rest letters) (concat used letter-tiles))))
-      used)))
+    (if (< (count tiles) (count word))
+      nil
+      (if (empty? letters)
+        used
+        (let [e (first letters)
+              letter-tiles (take (val e)
+                                 (filter #(= (key e) (get % :letter)) tiles))]
+          (if (not= (count letter-tiles) (val e))
+            nil
+            (recur (rest letters) (concat used letter-tiles))))))))
 
 (defn score [tiles]
   "Calculates the score for given tiles."
@@ -56,12 +58,11 @@
     (apply merge-with - (map frequencies [s1 s2]))))
 
 (defn get-all-words [dictionary tiles]
-  (sort-by
-    :score >
-    (for [word dictionary
-          :let [match (tiles-can-spell tiles word)]
-          :when (seq match)]
-      {:word word :tiles match :score (score match)})))
+  (sort-by :score >
+           (for [word dictionary
+                 :let [match (tiles-can-spell tiles word)]
+                 :when (seq match)]
+             {:word word :tiles match :score (score match)})))
 
 (defn solution [pair]
   (reduce + (map :score pair)))
