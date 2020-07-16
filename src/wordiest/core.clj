@@ -1,5 +1,7 @@
-#!/usr/bin/env clj
-(require '[clojure.string :as str])
+(ns wordiest.core
+  (:gen-class)
+  (:require [clojure.string :as str])
+  (:require [clojure.java.io :as io]))
 
 (defn letter-value [c]
   "Wordiest letter values."
@@ -69,15 +71,17 @@
 
 (defn print-solution [pair]
   (let [[a b] pair]
-    (printf "%s: %s + %s\n" (solution pair) (match-str a) (match-str b))))
+    (printf "%s: %s + %s\n" (solution pair) (match-str a) (match-str b))
+    (flush)))
 
-(defn get-dictionary [file]
+(defn get-dictionary []
   "Reads word list into a vector."
-  (with-open [fp (clojure.java.io/reader file)]
+  (with-open [fp (io/reader (io/resource "TWL06.txt"))]
     (reduce conj []
-            (map #(.toLowerCase %)
-                 (filter #(not (str/starts-with? "#" %))
-                         (line-seq fp))))))
+            (for [line (line-seq fp)
+                  :let [line (.toLowerCase line)]
+                  :when (not (str/starts-with? "#" line))]
+              line))))
 
 (defn sort-tiles [tiles]
   (sort-by (juxt :word-mul :letter-mul) #(compare %2 %1) tiles))
@@ -91,8 +95,7 @@
       tiles)))
 
 (defn solve [tiles]
-  (let [dictionary (get-dictionary "TWL06.txt")
-        matches (get-all-words dictionary tiles)]
+  (let [matches (get-all-words (get-dictionary) tiles)]
     (first
       (sort-by
         solution >
@@ -104,12 +107,13 @@
               :when second-word]
           [match second-word])))))
 
-(def tiles (parse-letters *command-line-args*))
-; TODO: Turn these testcases into tests.
-; (def tiles (parse-letters (str/split "c a i o o g w5w e u r2l r i2l u2w l" #"\s+")))
-; (def tiles (parse-letters (str/split "e4w v e t5l n q i d2l f u i w s3w t" #"\s+")))
-; (def tiles (parse-letters (str/split "n e2l z t s a s n l t3l e e e f" #"\s+")))
+(defn -main [& args]
+  (def tiles (parse-letters args))
+  ; TODO: Turn these testcases into tests.
+  ; (def tiles (parse-letters (str/split "c a i o o g w5w e u r2l r i2l u2w l" #"\s+")))
+  ; (def tiles (parse-letters (str/split "e4w v e t5l n q i d2l f u i w s3w t" #"\s+")))
+  ; (def tiles (parse-letters (str/split "n e2l z t s a s n l t3l e e e f" #"\s+")))
 
-(if (nil? tiles)
-  (println "Invalid tiles")
-  (print-solution (solve tiles)))
+  (if (nil? tiles)
+    (println "Invalid tiles")
+    (print-solution (solve tiles))))
