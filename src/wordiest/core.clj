@@ -31,18 +31,16 @@
 
 (defn tiles-can-spell [tiles word]
   "Return the tiles to spell the given word, otherwise nil."
-  (loop [letters (frequencies word)
-         used []]
-    (if (< (count tiles) (count word))
-      nil
-      (if (empty? letters)
-        used
+  (when (>= (count tiles) (count word))
+    (loop [letters (frequencies word)
+           used []]
+      (if (seq letters)
         (let [e (first letters)
               letter-tiles (take (val e)
                                  (filter #(= (key e) (get % :letter)) tiles))]
-          (if (not= (count letter-tiles) (val e))
-            nil
-            (recur (rest letters) (concat used letter-tiles))))))))
+          (when (= (count letter-tiles) (val e))
+            (recur (rest letters) (concat used letter-tiles))))
+        used))))
 
 (defn score [tiles]
   "Calculates the score for given tiles."
@@ -52,10 +50,16 @@
                                tiles))]
     (* letters word-mul)))
 
+(defn sort-tiles [tiles]
+  (sort-by
+    (juxt :word-mul :letter-mul) #(compare %2 %1)
+    tiles))
+
 (defn diff [s1 s2]
-  (mapcat
-    (fn [[x n]] (repeat n x))
-    (apply merge-with - (map frequencies [s1 s2]))))
+  (sort-tiles
+    (mapcat
+      (fn [[x n]] (repeat n x))
+      (apply merge-with - (map frequencies [s1 s2])))))
 
 (defn get-all-words [dictionary tiles]
   (sort-by :score >
@@ -84,29 +88,23 @@
                   :when (not (str/starts-with? "#" line))]
               line))))
 
-(defn sort-tiles [tiles]
-  (sort-by (juxt :word-mul :letter-mul) #(compare %2 %1) tiles))
-
 (defn parse-letters [letters]
   "Converts letters to tiles, sorts by tile strength, and validates input."
   (let [tiles (sort-tiles (map to-tile letters))]
-    (if (or (not= (count tiles) 14)
-            (some nil? tiles))
-      nil
+    (when (and (= (count tiles) 14)
+               (not-any? nil? tiles))
       tiles)))
 
 (defn solve [tiles]
   (let [matches (get-all-words (get-dictionary) tiles)]
-    (first
-      (sort-by
-        solution >
-        (for [match (take 50 matches)
-              :let [remaining (sort-tiles (diff tiles (:tiles match)))
-                    second-word (first (get-all-words
-                                         (map :word matches)
-                                         remaining))]
-              :when second-word]
-          [match second-word])))))
+    (apply max-key solution
+           (for [match (take 50 matches)
+                 :let [remaining (diff tiles (:tiles match))
+                       second-word (first (get-all-words
+                                            (map :word matches)
+                                            remaining))]
+                 :when second-word]
+             [match second-word]))))
 
 (defn -main [& args]
   (def tiles (parse-letters args))
