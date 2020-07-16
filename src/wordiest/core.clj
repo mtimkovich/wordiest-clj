@@ -1,7 +1,7 @@
 (ns wordiest.core
   (:gen-class)
-  (:require [clojure.string :as str])
-  (:require [clojure.java.io :as io]))
+  (:require [clojure.java.io :as io])
+  (:require [clojure.string :as str]))
 
 (defn letter-value [c]
   "Wordiest letter values."
@@ -31,23 +31,22 @@
 
 (defn tiles-can-spell [tiles word]
   "Return the tiles to spell the given word, otherwise nil."
-  (when (>= (count tiles) (count word))
-    (loop [letters (frequencies word)
-           used []]
-      (if (seq letters)
-        (let [e (first letters)
-              letter-tiles (take (val e)
-                                 (filter #(= (key e) (get % :letter)) tiles))]
-          (when (= (count letter-tiles) (val e))
-            (recur (rest letters) (concat used letter-tiles))))
-        used))))
+  {:pre [(>= (count tiles) (count word))]}
+  (loop [letters (frequencies word)
+         used []]
+    (if (seq letters)
+      (let [e (first letters)
+            letter-tiles (take (val e)
+                               (filter #(= (key e) (get % :letter)) tiles))]
+        (when (= (count letter-tiles) (val e))
+          (recur (rest letters) (concat used letter-tiles))))
+      used)))
 
 (defn score [tiles]
   "Calculates the score for given tiles."
   (let [word-mul (reduce * (map #(get % :word-mul 1) tiles))
         letters (reduce + (map #(* (:letter-val %)
-                                   (get % :letter-mul 1))
-                               tiles))]
+                                   (get % :letter-mul 1)) tiles))]
     (* letters word-mul)))
 
 (defn sort-tiles [tiles]
@@ -91,9 +90,8 @@
 (defn parse-letters [letters]
   "Converts letters to tiles, sorts by tile strength, and validates input."
   (let [tiles (sort-tiles (map to-tile letters))]
-    (when (and (= (count tiles) 14)
-               (not-any? nil? tiles))
-      tiles)))
+    (when (= (count (filter some? tiles)) 14))
+      tiles))
 
 (defn solve [tiles]
   (let [matches (get-all-words (get-dictionary) tiles)]
