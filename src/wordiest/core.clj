@@ -18,13 +18,14 @@
   "Converts user input into tiles."
   (let [s (.toLowerCase s)
         letter (get s 0)
+        letter-val (letter-value letter)
         tile {:letter letter
-              :letter-val (letter-value letter)}]
+              :letter-val letter-val}]
     (case (count s)
       1 tile
       3 (let [mul (Character/getNumericValue (get s 1))]
           (case (get s 2)
-            \l (assoc tile :letter-mul mul)
+            \l (assoc tile :letter-val (* mul letter-val))
             \w (assoc tile :word-mul mul)
             nil))
       nil)))
@@ -45,13 +46,12 @@
 (defn score [tiles]
   "Calculates the score for given tiles."
   (let [word-mul (reduce * (map #(get % :word-mul 1) tiles))
-        letters (reduce + (map #(* (:letter-val %)
-                                   (get % :letter-mul 1)) tiles))]
+        letters (reduce + (map :letter-val tiles))]
     (* letters word-mul)))
 
 (defn sort-tiles [tiles]
   (sort-by
-    (juxt :word-mul :letter-mul) #(compare %2 %1)
+    (juxt :word-mul :letter-val) #(compare %2 %1)
     tiles))
 
 (defn diff [s1 s2]
