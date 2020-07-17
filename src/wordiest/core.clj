@@ -37,7 +37,7 @@
     (if (seq letters)
       (let [e (first letters)
             letter-tiles (take (val e)
-                               (filter #(= (key e) (get % :letter)) tiles))]
+                               (filter #(= (key e) (:letter %)) tiles))]
         (when (= (count letter-tiles) (val e))
           (recur (rest letters) (concat used letter-tiles))))
       used)))
@@ -105,12 +105,7 @@
              [match second-word]))))
 
 (defn -main [& args]
-  (def tiles (parse-letters args))
-  ; TODO: Turn these testcases into tests.
-  ; (def tiles (parse-letters (str/split "c a i o o g w5w e u r2l r i2l u2w l" #"\s+")))
-  ; (def tiles (parse-letters (str/split "e4w v e t5l n q i d2l f u i w s3w t" #"\s+")))
-  ; (def tiles (parse-letters (str/split "n e2l z t s a s n l t3l e e e f" #"\s+")))
-
-  (if (nil? tiles)
-    (println "Invalid tiles")
-    (print-solution (solve tiles))))
+  (let [tiles (parse-letters args)]
+    (if (nil? tiles)
+      (println "Invalid tiles")
+      (print-solution (solve tiles)))))
