@@ -90,8 +90,9 @@
 (defn parse-letters [letters]
   "Converts letters to tiles, sorts by tile strength, and validates input."
   (let [tiles (sort-tiles (map to-tile letters))]
-    (when (= (count (filter some? tiles)) 14))
-      tiles))
+    (when (and (= (count tiles) 14)
+               (not-any? nil? tiles))
+      tiles)))
 
 (defn solve [tiles]
   (let [matches (get-all-words (get-dictionary) tiles)]
